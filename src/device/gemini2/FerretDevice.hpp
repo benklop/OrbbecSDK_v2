@@ -7,7 +7,6 @@
 //   • extensionPid_ = 0x0670 so closed extensions recognise the device via
 //     ob_device_info_get_pid() without modifying prebuilt .so files.
 //   • OrbbecSDKConfig.xml <CR-ScanFerret> supplies LibUVC + Gemini2-class defaults.
-//   • A distinct type for Ferret-specific logic (e.g. algo.obconfig delivery).
 //   • An override hook for createRecommendedPostProcessingFilters().
 //
 // Construction notes

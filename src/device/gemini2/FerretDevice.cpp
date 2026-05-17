@@ -58,12 +58,6 @@ FerretDevice::FerretDevice(const std::shared_ptr<const IDeviceEnumInfo> &info) :
 
     // UVC backend and stream defaults: OrbbecSDKConfig.xml <CR-ScanFerret> (must
     // exist before G2Device::fixSensorList opens ports; see device name from firmware).
-
-    // Future Ferret-specific post-init work:
-    //   • Load algo.obconfig blobs and push them to the frame processor via
-    //     PrivFilterCppWrapper::setConfigData() if needed for depth quality.
-    //   • Override depth work-mode defaults if the Ferret firmware exposes a
-    //     different mode set than the stock Gemini 2.
 }
 
 std::vector<std::shared_ptr<IFilter>> FerretDevice::createRecommendedPostProcessingFilters(OBSensorType type) {
