@@ -276,7 +276,7 @@ int GVCPClient::openClientSockets() {
     sockCount_ = index;
 #else
     struct ifaddrs *ifaddr, *ifa;
-    int             family, s, n;
+    int             family, s;
     char            host[NI_MAXHOST];
 
     if(getifaddrs(&ifaddr) == -1) {
@@ -286,7 +286,7 @@ int GVCPClient::openClientSockets() {
 
     int index = 0;
 
-    for(ifa = ifaddr, n = 0; ifa != NULL; ifa = ifa->ifa_next, n++) {
+    for(ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next) {
         if(ifa->ifa_addr == NULL)
             continue;
 
@@ -870,7 +870,7 @@ void GVCPClient::checkAndUpdateSockets() {
     sockCount_ = index;
 #else
     struct ifaddrs *ifaddr, *ifa;
-    int             family, s, n;
+    int             family, s;
     char            host[NI_MAXHOST];
 
     if(getifaddrs(&ifaddr) == -1) {
@@ -880,7 +880,7 @@ void GVCPClient::checkAndUpdateSockets() {
 
     int index = sockCount_;
 
-    for(ifa = ifaddr, n = 0; ifa != NULL; ifa = ifa->ifa_next, n++) {
+    for(ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next) {
         if(ifa->ifa_addr == NULL)
             continue;
 

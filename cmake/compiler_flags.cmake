@@ -119,6 +119,13 @@ elseif ("${CMAKE_C_COMPILER_ID}" STREQUAL "GNU")
         # For older versions (e.g., 4.9.x), do not set -Werror to avoid issues with older toolchains.
         message(STATUS "Disabling -Werror for GCC version ${CMAKE_C_COMPILER_VERSION}")
     endif()
+    # GCC 12+ produces a false-positive -Warray-bounds when std::mutex is
+    # constructed through inlined stl_construct.h paths (the analyser believes
+    # the mutex object overflows a 32-byte internal buffer, but the allocation
+    # is correct).  Suppress the warning for GCC >= 12 only.
+    if (CMAKE_C_COMPILER_VERSION VERSION_GREATER_EQUAL "12.0")
+        add_compile_options(-Wno-array-bounds)
+    endif()
 elseif ("${CMAKE_C_COMPILER_ID}" STREQUAL "MSVC")
     set(MSVC_ALL_WARNINGS "/W4" "/wd4200") #Note: allow zero length arrays
     set(MSVC_WARNINGS_AS_ERRORS "/WX")
