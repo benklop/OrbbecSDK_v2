@@ -47,6 +47,30 @@ constexpr uint8_t INTERFACE_COLOR = 4;
 constexpr uint8_t INTERFACE_IR    = 2;
 constexpr uint8_t INTERFACE_DEPTH = 0;
 
+static SourcePortInfoList::const_iterator findColorSourcePort(const SourcePortInfoList &sourcePortInfoList) {
+    auto isUvc = [](const std::shared_ptr<const SourcePortInfo> &portInfo) { return portInfo->portType == SOURCE_PORT_USB_UVC; };
+
+    for(uint8_t infIndex: { INTERFACE_COLOR, static_cast<uint8_t>(INTERFACE_COLOR + 1) }) {
+        auto iter = std::find_if(sourcePortInfoList.begin(), sourcePortInfoList.end(), [&](const std::shared_ptr<const SourcePortInfo> &portInfo) {
+            if(!isUvc(portInfo)) {
+                return false;
+            }
+            return std::dynamic_pointer_cast<const USBSourcePortInfo>(portInfo)->infIndex == infIndex;
+        });
+        if(iter != sourcePortInfoList.end()) {
+            return iter;
+        }
+    }
+
+    return std::find_if(sourcePortInfoList.begin(), sourcePortInfoList.end(), [&](const std::shared_ptr<const SourcePortInfo> &portInfo) {
+        if(!isUvc(portInfo)) {
+            return false;
+        }
+        const auto &name = std::dynamic_pointer_cast<const USBSourcePortInfo>(portInfo)->infName;
+        return name.find("RGB") != std::string::npos || name.find("Color") != std::string::npos;
+    });
+}
+
 constexpr uint16_t GEMINI2L_PID = 0x0673;
 constexpr uint16_t GEMINI2_PID  = 0x0670;
 
@@ -364,57 +388,10 @@ void G2Device::initSensorList() {
         });
     }
 
-    auto colorPortInfoIter = std::find_if(sourcePortInfoList.begin(), sourcePortInfoList.end(), [](const std::shared_ptr<const SourcePortInfo> &portInfo) {
-        return portInfo->portType == SOURCE_PORT_USB_UVC && std::dynamic_pointer_cast<const USBSourcePortInfo>(portInfo)->infIndex == INTERFACE_COLOR;
-    });
+    auto colorPortInfoIter = findColorSourcePort(sourcePortInfoList);
 
     if(colorPortInfoIter != sourcePortInfoList.end()) {
-        auto colorPortInfo = *colorPortInfoIter;
-        registerComponent(
-            OB_DEV_COMPONENT_COLOR_SENSOR,
-            [this, colorPortInfo]() {
-                auto port   = getSourcePort(colorPortInfo);
-                auto sensor = std::make_shared<VideoSensor>(this, OB_SENSOR_COLOR, port);
-
-                std::vector<FormatFilterConfig> formatFilterConfigs = {
-                    { FormatFilterPolicy::REMOVE, OB_FORMAT_NV12, OB_FORMAT_ANY, nullptr },
-                };
-
-                auto formatConverter = getSensorFrameFilter("FormatConverter", OB_SENSOR_COLOR, false);
-                if(formatConverter) {
-#ifdef WIN32
-                    formatFilterConfigs.push_back({ FormatFilterPolicy::ADD, OB_FORMAT_BGR, OB_FORMAT_RGB, formatConverter });
-                    formatFilterConfigs.push_back({ FormatFilterPolicy::REMOVE, OB_FORMAT_BGR });
-                    formatFilterConfigs.push_back({ FormatFilterPolicy::REMOVE, OB_FORMAT_BGRA });
-#else
-                    formatFilterConfigs.push_back({ FormatFilterPolicy::ADD, OB_FORMAT_MJPG, OB_FORMAT_RGB, formatConverter });
-#endif
-                }
-                sensor->updateFormatFilterConfig(formatFilterConfigs);
-
-                auto frameTimestampCalculator = videoFrameTimestampCalculatorCreator_();
-                sensor->setFrameTimestampCalculator(frameTimestampCalculator);
-
-                auto globalFrameTimestampCalculator = std::make_shared<GlobalTimestampCalculator>(this, deviceTimeFreq_, frameTimeFreq_);
-                sensor->setGlobalTimestampCalculator(globalFrameTimestampCalculator);
-
-                auto frameProcessor = getComponentT<FrameProcessor>(OB_DEV_COMPONENT_COLOR_FRAME_PROCESSOR, false);
-                if(frameProcessor) {
-                    sensor->setFrameProcessor(frameProcessor.get());
-                }
-
-                initSensorStreamProfile(sensor);
-
-                return sensor;
-            },
-            true);
-        registerSensorPortInfo(OB_SENSOR_COLOR, colorPortInfo);
-
-        registerComponent(OB_DEV_COMPONENT_COLOR_FRAME_PROCESSOR, [this]() {
-            auto factory        = getComponentT<FrameProcessorFactory>(OB_DEV_COMPONENT_FRAME_PROCESSOR_FACTORY);
-            auto frameProcessor = factory->createFrameProcessor(OB_SENSOR_COLOR);
-            return frameProcessor;
-        });
+        registerColorSensorFromPort(*colorPortInfoIter);
     }
 
     auto imuPortInfoIter = std::find_if(sourcePortInfoList.begin(), sourcePortInfoList.end(), [](const std::shared_ptr<const SourcePortInfo> &portInfo) {
@@ -471,6 +448,63 @@ void G2Device::initSensorList() {
             },
             true);
         registerSensorPortInfo(OB_SENSOR_GYRO, imuPortInfo);
+    }
+}
+
+void G2Device::registerColorSensorFromPort(const std::shared_ptr<const SourcePortInfo> &colorPortInfo) {
+    if(isComponentExists(OB_DEV_COMPONENT_COLOR_SENSOR)) {
+        return;
+    }
+
+    auto usbPort = std::dynamic_pointer_cast<const USBSourcePortInfo>(colorPortInfo);
+    LOG_INFO("Register color sensor on UVC interface {} ({})", usbPort ? (int)usbPort->infIndex : -1, usbPort ? usbPort->infName : "");
+
+    registerComponent(
+        OB_DEV_COMPONENT_COLOR_SENSOR,
+        [this, colorPortInfo]() {
+            auto port   = getSourcePort(colorPortInfo);
+            auto sensor = std::make_shared<VideoSensor>(this, OB_SENSOR_COLOR, port);
+
+            std::vector<FormatFilterConfig> formatFilterConfigs = {
+                { FormatFilterPolicy::REMOVE, OB_FORMAT_NV12, OB_FORMAT_ANY, nullptr },
+            };
+
+            auto formatConverter = getSensorFrameFilter("FormatConverter", OB_SENSOR_COLOR, false);
+            if(formatConverter) {
+#ifdef WIN32
+                formatFilterConfigs.push_back({ FormatFilterPolicy::ADD, OB_FORMAT_BGR, OB_FORMAT_RGB, formatConverter });
+                formatFilterConfigs.push_back({ FormatFilterPolicy::REMOVE, OB_FORMAT_BGR });
+                formatFilterConfigs.push_back({ FormatFilterPolicy::REMOVE, OB_FORMAT_BGRA });
+#else
+                formatFilterConfigs.push_back({ FormatFilterPolicy::ADD, OB_FORMAT_MJPG, OB_FORMAT_RGB, formatConverter });
+#endif
+            }
+            sensor->updateFormatFilterConfig(formatFilterConfigs);
+
+            auto frameTimestampCalculator = videoFrameTimestampCalculatorCreator_();
+            sensor->setFrameTimestampCalculator(frameTimestampCalculator);
+
+            auto globalFrameTimestampCalculator = std::make_shared<GlobalTimestampCalculator>(this, deviceTimeFreq_, frameTimeFreq_);
+            sensor->setGlobalTimestampCalculator(globalFrameTimestampCalculator);
+
+            auto frameProcessor = getComponentT<FrameProcessor>(OB_DEV_COMPONENT_COLOR_FRAME_PROCESSOR, false);
+            if(frameProcessor) {
+                sensor->setFrameProcessor(frameProcessor.get());
+            }
+
+            initSensorStreamProfile(sensor);
+
+            return sensor;
+        },
+        true);
+    registerSensorPortInfo(OB_SENSOR_COLOR, colorPortInfo);
+
+    if(!isComponentExists(OB_DEV_COMPONENT_COLOR_FRAME_PROCESSOR)) {
+        registerComponent(OB_DEV_COMPONENT_COLOR_FRAME_PROCESSOR, [this]() {
+            auto factory        = getComponentT<FrameProcessorFactory>(OB_DEV_COMPONENT_FRAME_PROCESSOR_FACTORY);
+            auto frameProcessor = factory->createFrameProcessor(OB_SENSOR_COLOR);
+            return frameProcessor;
+        });
     }
 }
 

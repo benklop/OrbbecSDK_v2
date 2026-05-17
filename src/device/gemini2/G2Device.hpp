@@ -19,6 +19,9 @@ public:
 
     std::vector<std::shared_ptr<IFilter>> createRecommendedPostProcessingFilters(OBSensorType type) override;
 
+protected:
+    void registerColorSensorFromPort(const std::shared_ptr<const SourcePortInfo> &colorPortInfo);
+
 private:
     void init() override;
     void initSensorList();

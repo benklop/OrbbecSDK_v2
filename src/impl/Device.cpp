@@ -652,7 +652,10 @@ HANDLE_EXCEPTIONS_AND_RETURN(nullptr, info)
 
 int ob_device_info_get_pid(const ob_device_info *info, ob_error **error) BEGIN_API_CALL {
     VALIDATE_NOT_NULL(info);
-    return info->info->pid_;
+    // Return extensionPid_ when set; this allows prebuilt extension .so libs
+    // to recognise OEM devices whose real USB PID is absent from their
+    // hardcoded device lists.  See DeviceInfo::extensionPid_ in IDevice.hpp.
+    return info->info->extensionPid_ ? info->info->extensionPid_ : info->info->pid_;
 }
 HANDLE_EXCEPTIONS_AND_RETURN(0, info)
 

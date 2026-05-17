@@ -431,6 +431,42 @@
             </IR>
         </FemtoBolt>
 
+        <!-- Creality CR-Scan Ferret (Orbbec Gemini 2 OEM, PID 0x069c). Firmware reports this
+             product name; keys use removeSpace() → CR-ScanFerret. -->
+        <CR-ScanFerret>
+            <LinuxUVCDefaultBackend>LibUVC</LinuxUVCDefaultBackend>
+            <DepthFilterDDOConfig>./Gemini2_v1.0.json</DepthFilterDDOConfig>
+            <DefaultHeartBeat>0</DefaultHeartBeat>
+            <Depth>
+                <Width>1280</Width>
+                <Height>800</Height>
+                <FPS>30</FPS>
+                <Format>RLE</Format>
+            </Depth>
+            <Color>
+                <Width>1280</Width>
+                <Height>720</Height>
+                <FPS>30</FPS>
+                <Format>MJPG</Format>
+            </Color>
+            <IR>
+                <Width>1280</Width>
+                <Height>800</Height>
+                <FPS>30</FPS>
+                <Format>Y8</Format>
+            </IR>
+            <Accel>
+                <StreamFailedRetry>3</StreamFailedRetry>
+                <MaxStartStreamDelayMs>5000</MaxStartStreamDelayMs>
+                <MaxFrameIntervalMs>3000</MaxFrameIntervalMs>
+            </Accel>
+            <Gyro>
+                <StreamFailedRetry>3</StreamFailedRetry>
+                <MaxStartStreamDelayMs>5000</MaxStartStreamDelayMs>
+                <MaxFrameIntervalMs>3000</MaxFrameIntervalMs>
+            </Gyro>
+        </CR-ScanFerret>
+
         <!-- Gemini2 config -->
         <Gemini2>
             <!-- The default Linux UVC backend. If the LinuxUVCBackend is set to "Auto," this item

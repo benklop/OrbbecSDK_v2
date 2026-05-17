@@ -75,6 +75,16 @@ void G2AlgParamManager::fetchParamFromDevice() {
         LOG_ERROR("Get depth to color profile list failed! {}", e.what());
     }
 
+    if(!calibrationCameraParamList_.empty()) {
+        for(auto &profile: d2cProfileList_) {
+            if(profile.paramIndex >= calibrationCameraParamList_.size()) {
+                LOG_WARN("Clamp invalid D2C paramIndex {} to 0 (calib entries: {})", static_cast<unsigned>(profile.paramIndex),
+                         calibrationCameraParamList_.size());
+                profile.paramIndex = 0;
+            }
+        }
+    }
+
     // imu param
     std::vector<uint8_t> data;
     try {

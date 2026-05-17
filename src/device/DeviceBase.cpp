@@ -350,6 +350,7 @@ DeviceComponentPtr<IDeviceComponent> DeviceBase::getComponent(DeviceComponentId 
                 it->initialized = true;
                 BEGIN_TRY_EXECUTE({ it->component = it->creator(); })
                 CATCH_EXCEPTION_AND_EXECUTE({
+                    it->initialized = false;
                     if(throwExIfNotFound) {
                         throw;
                     }

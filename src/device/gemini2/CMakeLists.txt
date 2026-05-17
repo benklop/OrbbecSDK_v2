@@ -31,5 +31,6 @@ target_sources(
     ${CMAKE_CURRENT_LIST_DIR}/G435LeMetadataTypes.hpp
     ${CMAKE_CURRENT_LIST_DIR}/G435LeFrameInterleaveManager.hpp
     ${CMAKE_CURRENT_LIST_DIR}/G435LeFrameInterleaveManager.cpp
-    
+    ${CMAKE_CURRENT_LIST_DIR}/FerretDevice.hpp
+    ${CMAKE_CURRENT_LIST_DIR}/FerretDevice.cpp
 )

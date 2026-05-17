@@ -177,7 +177,16 @@ void AlgParamManagerBase::bindIntrinsic(std::vector<std::shared_ptr<const Stream
                 THROW_UNSUPPORTED_OPERATION_EXCEPTION("Can not find matched camera param!");
             }
 
-            auto param            = calibrationCameraParamList_.at(d2cProfile.paramIndex);
+            if(calibrationCameraParamList_.empty()) {
+                THROW_UNSUPPORTED_OPERATION_EXCEPTION("Calibration camera param list is empty!");
+            }
+            uint8_t paramIndex = d2cProfile.paramIndex;
+            if(paramIndex >= calibrationCameraParamList_.size()) {
+                LOG_WARN("D2C profile paramIndex {} out of range ({} entries), using index 0", static_cast<unsigned>(paramIndex),
+                         calibrationCameraParamList_.size());
+                paramIndex = 0;
+            }
+            auto param            = calibrationCameraParamList_.at(paramIndex);
             auto postProcessParam = d2cProfile.postProcessParam;
 
             // Fix intrinsic from calibration to d2c profile according to the ratio of resolution

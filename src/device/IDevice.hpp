@@ -15,6 +15,11 @@ struct DeviceInfo {
     // identifier of the device
     int         pid_ = 0;
     int         vid_ = 0;
+    // extensionPid_: if non-zero, returned by ob_device_info_get_pid() instead
+    // of pid_.  Prebuilt extensions under extensions/ must not be modified
+    // (see extensions/license.txt); this field lets them see a canonical Orbbec
+    // PID while pid_ keeps the real USB identity for open-source SDK code.
+    int         extensionPid_ = 0;
     std::string uid_;  // Unique identifier of the port the device is connected to (platform specific)
     std::string name_;
     std::string fullName_;

@@ -6,6 +6,7 @@
 #include "G2XLDevice.hpp"
 #include "G210Device.hpp"
 #include "G435LeDevice.hpp"
+#include "FerretDevice.hpp"
 #include "DevicePids.hpp"
 #include "utils/Utils.hpp"
 #include "exception/ObException.hpp"
@@ -18,12 +19,13 @@
 #include "ethernet/NetDataStreamPort.hpp"
 #endif
 
+#include <algorithm>
 #include <map>
 
 namespace libobsensor {
 
 const std::map<int, std::string> G2DeviceNameMap = {
-    { 0x0670, "Gemini2" }, { 0x0673, "Gemini2 L" }, { 0x0671, "Gemini2 XL" }, { 0x0808, "Gemini 215" }, { 0x0809, "Gemini 210" }
+    { 0x0670, "Gemini2" }, { 0x0673, "Gemini2 L" }, { 0x0671, "Gemini2 XL" }, { 0x0808, "Gemini 215" }, { 0x0809, "Gemini 210" }, { 0x069c, "CR-Scan Ferret" }
 };
 
 G2DeviceInfo::G2DeviceInfo(const SourcePortInfoList groupedInfoList) {
@@ -40,6 +42,9 @@ G2DeviceInfo::G2DeviceInfo(const SourcePortInfoList groupedInfoList) {
         }
 
         fullName_ = "Orbbec " + name_;
+        if(portInfo->pid == 0x069c) {
+            fullName_ = "Orbbec CR-Scan Ferret";
+        }
 
         pid_                = portInfo->pid;
         vid_                = portInfo->vid;
@@ -101,6 +106,10 @@ std::shared_ptr<IDevice> G2DeviceInfo::createDevice(OBDeviceAccessMode accessMod
         else if(pid_ == 0x0808 || pid_ == 0x0809) {
             return std::make_shared<G210Device>(shared_from_this());
         }
+        else if(pid_ == 0x069c) {
+            // Creality CR-Scan Ferret — Orbbec Gemini 2 OEM (VID 0x2bc5)
+            return std::make_shared<FerretDevice>(shared_from_this());
+        }
     }
     return std::make_shared<G2Device>(shared_from_this());
 }
@@ -112,7 +121,15 @@ std::vector<std::shared_ptr<IDeviceEnumInfo>> G2DeviceInfo::pickDevices(const So
     auto                                          groups    = utils::groupVector<std::shared_ptr<const SourcePortInfo>>(remainder, GroupUSBSourcePortByUrl);
     auto                                          iter      = groups.begin();
     while(iter != groups.end()) {
-        if(iter->size() >= 4) {
+        bool hasRgbUvc = std::any_of(iter->begin(), iter->end(), [](const std::shared_ptr<const SourcePortInfo> &portInfo) {
+            if(portInfo->portType != SOURCE_PORT_USB_UVC) {
+                return false;
+            }
+            const auto &name = std::dynamic_pointer_cast<const USBSourcePortInfo>(portInfo)->infName;
+            return name.find("RGB") != std::string::npos || name.find("Color") != std::string::npos;
+        });
+        const auto minPorts = hasRgbUvc ? 4u : 3u;
+        if(iter->size() >= minPorts) {
             auto info = std::make_shared<G2DeviceInfo>(*iter);
             G2DeviceInfos.push_back(info);
         }
